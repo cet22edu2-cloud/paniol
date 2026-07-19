@@ -4,11 +4,13 @@ import { useAuth } from '../../context/AuthContext';
 import SearchBar from '../common/SearchBar';
 import LoadingSpinner from '../common/LoadingSpinner';
 import DocenteForm from './DocenteForm';
+import ImportData from '../common/ImportData';
 
 const DocentesList = () => {
   const { role } = useAuth();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [selectedDocente, setSelectedDocente] = useState(null);
   const { data: docentes, loading, error, refetch } = useDocentes({ search });
 
@@ -28,19 +30,29 @@ const DocentesList = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <h1 className="text-2xl font-bold">Docentes</h1>
-        {(role === 'ADMIN') && (
-          <button
-            onClick={() => {
-              setSelectedDocente(null);
-              setShowForm(true);
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            + Nuevo Docente
-          </button>
-        )}
+        <div className="flex gap-2">
+          {(role === 'ADMIN') && (
+            <>
+              <button
+                onClick={() => setShowImport(true)}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+              >
+                📥 Importar Excel
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedDocente(null);
+                  setShowForm(true);
+                }}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                + Nuevo Docente
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <SearchBar placeholder="Buscar docente..." onSearch={setSearch} />
@@ -97,6 +109,17 @@ const DocentesList = () => {
             setSelectedDocente(null);
           }}
           onSuccess={handleSuccess}
+        />
+      )}
+
+      {showImport && (
+        <ImportData
+          tipo="docentes"
+          onClose={() => setShowImport(false)}
+          onSuccess={() => {
+            setShowImport(false);
+            refetch();
+          }}
         />
       )}
     </div>

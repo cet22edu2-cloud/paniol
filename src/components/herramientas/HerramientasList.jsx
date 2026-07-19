@@ -5,32 +5,44 @@ import SearchBar from '../common/SearchBar';
 import LoadingSpinner from '../common/LoadingSpinner';
 import HerramientaCard from './HerramientaCard';
 import HerramientaForm from './HerramientaForm';
+import ImportData from '../common/ImportData';
 
 const HerramientasList = () => {
   const { role } = useAuth();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [selectedHerramienta, setSelectedHerramienta] = useState(null);
-  const { data: herramientas, loading, error } = useHerramientas({ search });
+  const { data: herramientas, loading, error, refetch } = useHerramientas({ search });
 
   if (loading) return <LoadingSpinner />;
   if (error) return <div className="text-red-600">Error: {error}</div>;
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <h1 className="text-2xl font-bold">Herramientas</h1>
-        {(role === 'ADMIN') && (
-          <button
-            onClick={() => {
-              setSelectedHerramienta(null);
-              setShowForm(true);
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            + Nueva Herramienta
-          </button>
-        )}
+        <div className="flex gap-2">
+          {(role === 'ADMIN') && (
+            <>
+              <button
+                onClick={() => setShowImport(true)}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+              >
+                📥 Importar Excel
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedHerramienta(null);
+                  setShowForm(true);
+                }}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                + Nueva Herramienta
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <SearchBar
@@ -67,7 +79,18 @@ const HerramientasList = () => {
           onSuccess={() => {
             setShowForm(false);
             setSelectedHerramienta(null);
-            window.location.reload();
+            refetch();
+          }}
+        />
+      )}
+
+      {showImport && (
+        <ImportData
+          tipo="herramientas"
+          onClose={() => setShowImport(false)}
+          onSuccess={() => {
+            setShowImport(false);
+            refetch();
           }}
         />
       )}
