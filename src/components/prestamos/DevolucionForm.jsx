@@ -42,12 +42,20 @@ const DevolucionForm = ({ prestamo, onClose, onSuccess }) => {
         }
 
         // Validar que detalle tenga herramienta_id
-        if (!detalle.herramienta_id) {
+        let herramientaId = detalle.herramienta_id;
+        
+        // Si no tiene herramienta_id, intentar obtenerla del objeto herramienta
+        if (!herramientaId && detalle.herramienta && detalle.herramienta.id) {
+          console.log('🔧 Usando herramienta.id como herramienta_id:', detalle.herramienta.id);
+          herramientaId = detalle.herramienta.id;
+        }
+
+        if (!herramientaId) {
           console.error('❌ Detalle sin herramienta_id:', detalle);
           throw new Error('Detalle sin herramienta_id');
         }
 
-        console.log(`📝 Actualizando detalle ${detalle.id}...`);
+        console.log(`📝 Actualizando detalle ${detalle.id} con herramienta_id ${herramientaId}...`);
 
         // 1. Actualizar detalle
         const { data: updatedDetalle, error: detalleError } = await supabase
@@ -70,7 +78,7 @@ const DevolucionForm = ({ prestamo, onClose, onSuccess }) => {
         const { data: herramienta, error: stockError } = await supabase
           .from('herramientas')
           .select('stock')
-          .eq('id', detalle.herramienta_id)
+          .eq('id', herramientaId)
           .single();
 
         if (stockError) {
@@ -85,7 +93,7 @@ const DevolucionForm = ({ prestamo, onClose, onSuccess }) => {
         const { error: updateError } = await supabase
           .from('herramientas')
           .update({ stock: nuevoStock })
-          .eq('id', detalle.herramienta_id);
+          .eq('id', herramientaId);
 
         if (updateError) {
           console.error('❌ Error al actualizar stock:', updateError);
@@ -95,7 +103,7 @@ const DevolucionForm = ({ prestamo, onClose, onSuccess }) => {
         // 4. Registrar movimiento
         console.log('📝 Registrando movimiento...');
         const movimiento = {
-          herramienta_id: detalle.herramienta_id,
+          herramienta_id: herramientaId,
           usuario_id: user.id,
           tipo: 'DEVOLUCION',
           cantidad: detalle.cantidad,

@@ -9,6 +9,8 @@ export const usePrestamos = (filtros = {}) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('🔄 Cargando préstamos...');
+
         let query = supabase
           .from('prestamos')
           .select(`
@@ -19,7 +21,10 @@ export const usePrestamos = (filtros = {}) => {
             prestamos_detalle(
               id,
               cantidad,
-              herramienta:herramientas(codigo, descripcion)
+              herramienta_id,
+              estado_salida,
+              estado_devolucion,
+              herramienta:herramientas(codigo, descripcion, marca, modelo)
             )
           `);
 
@@ -37,9 +42,15 @@ export const usePrestamos = (filtros = {}) => {
           .order('fecha_prestamo', { ascending: false })
           .limit(100);
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Error en consulta:', error);
+          throw error;
+        }
+
+        console.log('📋 Préstamos cargados:', data);
         setData(data);
       } catch (err) {
+        console.error('❌ Error general:', err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -54,7 +65,6 @@ export const usePrestamos = (filtros = {}) => {
 
 export const crearPrestamo = async (prestamo, detalles) => {
   try {
-    // 1. Crear el préstamo
     const { data: prestamoData, error: prestamoError } = await supabase
       .from('prestamos')
       .insert(prestamo)
@@ -63,7 +73,6 @@ export const crearPrestamo = async (prestamo, detalles) => {
 
     if (prestamoError) throw prestamoError;
 
-    // 2. Crear los detalles
     const detallesConPrestamo = detalles.map(d => ({
       ...d,
       prestamo_id: prestamoData.id
