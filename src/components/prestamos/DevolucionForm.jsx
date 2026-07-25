@@ -148,16 +148,18 @@ const DevolucionForm = ({ prestamo, onClose, onSuccess }) => {
       // Mostrar mensaje de éxito
       alert('✅ Devolución completada exitosamente');
       
-      // Cerrar el modal y actualizar la lista
+      // ============================================================
+      // 🔧 CORRECCIÓN: Cerrar el modal y actualizar la lista
+      // ============================================================
       setLoading(false);
       
       // Primero actualizar la lista (onSuccess)
-      if (onSuccess) {
+      if (onSuccess && typeof onSuccess === 'function') {
         onSuccess();
       }
       
       // Luego cerrar el modal (onClose)
-      if (onClose) {
+      if (onClose && typeof onClose === 'function') {
         onClose();
       }
 

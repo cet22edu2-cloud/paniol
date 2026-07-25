@@ -139,8 +139,16 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
       }
 
       alert('✅ Préstamo creado exitosamente');
-      onSuccess();
-      onClose();
+      
+      // Cerrar el modal y actualizar la lista
+      if (onSuccess && typeof onSuccess === 'function') {
+        onSuccess();
+      }
+      
+      if (onClose && typeof onClose === 'function') {
+        onClose();
+      }
+      
     } catch (error) {
       console.error('Error creando préstamo:', error);
       alert('❌ Error al crear el préstamo: ' + error.message);
