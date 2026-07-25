@@ -144,13 +144,26 @@ const DevolucionForm = ({ prestamo, onClose, onSuccess }) => {
 
       console.log('✅ Préstamo cerrado:', closedPrestamo);
       console.log('✅ Devolución completada exitosamente');
+      
+      // Mostrar mensaje de éxito
       alert('✅ Devolución completada exitosamente');
-      onSuccess();
-      onClose();
+      
+      // Cerrar el modal y actualizar la lista
+      setLoading(false);
+      
+      // Primero actualizar la lista (onSuccess)
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      // Luego cerrar el modal (onClose)
+      if (onClose) {
+        onClose();
+      }
+
     } catch (error) {
       console.error('❌ Error al devolver:', error);
       alert('❌ Error al procesar la devolución: ' + error.message);
-    } finally {
       setLoading(false);
     }
   };

@@ -29,7 +29,8 @@ const PrestamosList = () => {
     setShowDevolucion(true);
   };
 
-  const handleSuccess = () => {
+  const handleDevolucionSuccess = () => {
+    console.log('🔄 Actualizando lista de préstamos...');
     refetch();
   };
 
@@ -131,10 +132,11 @@ const PrestamosList = () => {
         <DevolucionForm
           prestamo={selectedPrestamo}
           onClose={() => {
+            console.log('🔒 Cerrando modal de devolución...');
             setShowDevolucion(false);
             setSelectedPrestamo(null);
           }}
-          onSuccess={handleSuccess}
+          onSuccess={handleDevolucionSuccess}
         />
       )}
 
