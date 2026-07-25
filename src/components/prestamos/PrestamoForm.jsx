@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import LoadingSpinner from '../common/LoadingSpinner';
 
 const PrestamoForm = ({ onClose, onSuccess }) => {
   const { user } = useAuth();
@@ -14,7 +13,7 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
   const [tiposSolicitud, setTiposSolicitud] = useState([]);
   const [filteredHerramientas, setFilteredHerramientas] = useState([]);
 
-  const { register, control, handleSubmit, watch, setValue } = useForm({
+  const { register, control, handleSubmit, watch } = useForm({
     defaultValues: {
       items: [{ herramienta_id: '', cantidad: 1 }]
     }
@@ -42,11 +41,6 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
         setTalleres(talleresRes.data || []);
         setCursos(cursosRes.data || []);
         setTiposSolicitud(tiposRes.data || []);
-        
-        console.log('📊 Herramientas cargadas:', herramientasRes.data);
-        console.log('📊 Talleres cargados:', talleresRes.data);
-        
-        // Inicialmente mostrar todas las herramientas
         setFilteredHerramientas(herramientasRes.data || []);
       } catch (error) {
         console.error('Error cargando datos:', error);
@@ -59,9 +53,7 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
   // Actualizar herramientas filtradas cuando cambia el taller
   useEffect(() => {
     if (tallerId) {
-      console.log('🔍 Filtro por taller ID:', tallerId);
       const filtered = herramientas.filter(h => h.taller_id === tallerId);
-      console.log('🔍 Herramientas filtradas:', filtered);
       setFilteredHerramientas(filtered);
     } else {
       setFilteredHerramientas(herramientas);
@@ -77,6 +69,7 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
         return;
       }
 
+      // 1. Crear el préstamo
       const prestamoData = {
         usuario_id: user.id,
         docente_id: data.docente_id,
@@ -95,6 +88,7 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
 
       if (prestamoError) throw prestamoError;
 
+      // 2. Crear los detalles del préstamo
       const detalles = data.items.map(item => ({
         prestamo_id: prestamo.id,
         herramienta_id: item.herramienta_id,
@@ -108,7 +102,9 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
 
       if (detalleError) throw detalleError;
 
+      // 3. Actualizar stock de herramientas
       for (const item of data.items) {
+        // Obtener stock actual
         const { data: herramienta, error: stockError } = await supabase
           .from('herramientas')
           .select('stock')
@@ -119,6 +115,7 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
 
         const nuevoStock = herramienta.stock - parseInt(item.cantidad);
         
+        // Actualizar stock
         const { error: updateError } = await supabase
           .from('herramientas')
           .update({ stock: nuevoStock })
@@ -126,7 +123,8 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
 
         if (updateError) throw updateError;
 
-        await supabase
+        // 4. Registrar movimiento de stock
+        const { error: movimientoError } = await supabase
           .from('movimientos_stock')
           .insert({
             herramienta_id: item.herramienta_id,
@@ -136,6 +134,8 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
             referencia: prestamo.id,
             observacion: `Préstamo #${prestamo.id}`
           });
+
+        if (movimientoError) throw movimientoError;
       }
 
       alert('✅ Préstamo creado exitosamente');
@@ -277,13 +277,6 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
               + Agregar herramienta
             </button>
             
-            {/* Debug: Mostrar información de filtrado */}
-            <div className="mt-2 text-xs text-gray-500">
-              <p>Total herramientas: {herramientas.length}</p>
-              <p>Filtradas: {filteredHerramientas.length}</p>
-              <p>Taller seleccionado ID: {tallerId || 'Ninguno'}</p>
-            </div>
-            
             {filteredHerramientas.length === 0 && tallerId && (
               <p className="text-yellow-600 text-sm mt-2">
                 ⚠️ No hay herramientas disponibles en este taller
@@ -304,7 +297,7 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
               disabled={loading}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? <LoadingSpinner /> : 'Crear Préstamo'}
+              {loading ? 'Creando...' : 'Crear Préstamo'}
             </button>
           </div>
         </form>
