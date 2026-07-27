@@ -29,14 +29,19 @@ const PrestamosList = () => {
     setShowDevolucion(true);
   };
 
-  const handleDevolucionSuccess = () => {
-    console.log('🔄 Actualizando lista de préstamos...');
-    refetch();
+  const handleDevolucionSuccess = async () => {
+    console.log('🔄 Actualizando lista de préstamos después de devolución...');
+    setShowDevolucion(false);
+    setSelectedPrestamo(null);
+    await refetch();
+    console.log('✅ Lista actualizada');
   };
 
-  const handlePrestamoSuccess = () => {
+  const handlePrestamoSuccess = async () => {
+    console.log('🔄 Actualizando lista de préstamos después de crear...');
     setShowPrestamoForm(false);
-    refetch();
+    await refetch();
+    console.log('✅ Lista actualizada');
   };
 
   if (loading) return <LoadingSpinner />;
@@ -132,7 +137,6 @@ const PrestamosList = () => {
         <DevolucionForm
           prestamo={selectedPrestamo}
           onClose={() => {
-            console.log('🔒 Cerrando modal de devolución...');
             setShowDevolucion(false);
             setSelectedPrestamo(null);
           }}

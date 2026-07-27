@@ -133,23 +133,16 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
 
       alert('✅ Préstamo creado exitosamente');
       
-      // Cerrar el modal y actualizar la lista
       setLoading(false);
       
-      try {
-        if (onSuccess && typeof onSuccess === 'function') {
-          onSuccess();
-        }
-      } catch (err) {
-        console.warn('Error en onSuccess:', err);
+      // Primero actualizar la lista (onSuccess)
+      if (onSuccess && typeof onSuccess === 'function') {
+        await onSuccess();
       }
       
-      try {
-        if (onClose && typeof onClose === 'function') {
-          onClose();
-        }
-      } catch (err) {
-        console.warn('Error en onClose:', err);
+      // Luego cerrar el modal (onClose)
+      if (onClose && typeof onClose === 'function') {
+        onClose();
       }
       
     } catch (error) {
