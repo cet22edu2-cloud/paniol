@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
 export const usePrestamos = (filtros = {}) => {
@@ -6,61 +6,62 @@ export const usePrestamos = (filtros = {}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        console.log('🔄 Cargando préstamos...');
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log('🔄 Cargando préstamos...');
 
-        let query = supabase
-          .from('prestamos')
-          .select(`
-            *,
-            docente:docentes(apellido, nombre, dni),
-            taller:talleres(nombre),
-            curso:cursos(año, division),
-            prestamos_detalle(
-              id,
-              cantidad,
-              herramienta_id,
-              estado_salida,
-              estado_devolucion,
-              herramienta:herramientas(codigo, descripcion, marca, modelo)
-            )
-          `);
+      let query = supabase
+        .from('prestamos')
+        .select(`
+          *,
+          docente:docentes(apellido, nombre, dni),
+          taller:talleres(nombre),
+          curso:cursos(año, division),
+          prestamos_detalle(
+            id,
+            cantidad,
+            herramienta_id,
+            estado_salida,
+            estado_devolucion,
+            herramienta:herramientas(codigo, descripcion, marca, modelo)
+          )
+        `);
 
-        if (filtros.estado && filtros.estado !== 'TODOS') {
-          query = query.eq('estado', filtros.estado);
-        }
-        if (filtros.search) {
-          query = query.or(`docentes.apellido.ilike.%${filtros.search}%,docentes.nombre.ilike.%${filtros.search}%`);
-        }
-        if (filtros.taller_id) {
-          query = query.eq('taller_id', filtros.taller_id);
-        }
-
-        const { data, error } = await query
-          .order('fecha_prestamo', { ascending: false })
-          .limit(100);
-
-        if (error) {
-          console.error('❌ Error en consulta:', error);
-          throw error;
-        }
-
-        console.log('📋 Préstamos cargados:', data);
-        setData(data);
-      } catch (err) {
-        console.error('❌ Error general:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+      if (filtros.estado && filtros.estado !== 'TODOS') {
+        query = query.eq('estado', filtros.estado);
       }
-    };
+      if (filtros.search) {
+        query = query.or(`docentes.apellido.ilike.%${filtros.search}%,docentes.nombre.ilike.%${filtros.search}%`);
+      }
+      if (filtros.taller_id) {
+        query = query.eq('taller_id', filtros.taller_id);
+      }
 
-    fetchData();
+      const { data, error } = await query
+        .order('fecha_prestamo', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.error('❌ Error en consulta:', error);
+        throw error;
+      }
+
+      console.log('📋 Préstamos cargados:', data?.length || 0);
+      setData(data || []);
+    } catch (err) {
+      console.error('❌ Error general:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, [filtros]);
 
-  return { data, loading, error };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
 };
 
 export const crearPrestamo = async (prestamo, detalles) => {

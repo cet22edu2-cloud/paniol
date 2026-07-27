@@ -30,7 +30,7 @@ const PrestamosList = () => {
   };
 
   const handleDevolucionSuccess = async () => {
-    console.log('🔄 Actualizando lista de préstamos después de devolución...');
+    console.log('🔄 Actualizando lista después de devolución...');
     setShowDevolucion(false);
     setSelectedPrestamo(null);
     await refetch();
@@ -38,7 +38,7 @@ const PrestamosList = () => {
   };
 
   const handlePrestamoSuccess = async () => {
-    console.log('🔄 Actualizando lista de préstamos después de crear...');
+    console.log('🔄 Actualizando lista después de crear préstamo...');
     setShowPrestamoForm(false);
     await refetch();
     console.log('✅ Lista actualizada');
@@ -69,7 +69,9 @@ const PrestamosList = () => {
         <select
           className="border rounded-lg px-3 py-2"
           value={filtros.estado}
-          onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
+          onChange={(e) => {
+            setFiltros({ ...filtros, estado: e.target.value });
+          }}
         >
           <option value="ABIERTO">Abiertos</option>
           <option value="CERRADO">Cerrados</option>
