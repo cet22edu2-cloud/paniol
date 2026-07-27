@@ -61,7 +61,7 @@ const PrestamosList = () => {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap gap-4 items-center">
         <SearchBar
           placeholder="Buscar por docente..."
           onSearch={(term) => setFiltros({ ...filtros, search: term })}
@@ -77,6 +77,33 @@ const PrestamosList = () => {
           <option value="CERRADO">Cerrados</option>
           <option value="TODOS">Todos</option>
         </select>
+        
+        <input
+          type="date"
+          className="border rounded-lg px-3 py-2"
+          onChange={(e) => setFiltros({ ...filtros, fecha_desde: e.target.value })}
+          placeholder="Fecha desde"
+        />
+        <input
+          type="date"
+          className="border rounded-lg px-3 py-2"
+          onChange={(e) => setFiltros({ ...filtros, fecha_hasta: e.target.value })}
+          placeholder="Fecha hasta"
+        />
+        
+        <button
+          onClick={() => setFiltros({ estado: 'TODOS', search: '', fecha_desde: '', fecha_hasta: '' })}
+          className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+        >
+          📋 Ver Historial
+        </button>
+        
+        <button
+          onClick={() => setFiltros({ estado: 'ABIERTO' })}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
+          🔄 Volver a Activos
+        </button>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">

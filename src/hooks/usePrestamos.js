@@ -37,6 +37,14 @@ export const usePrestamos = (filtros = {}) => {
       if (filtros.taller_id) {
         query = query.eq('taller_id', filtros.taller_id);
       }
+      if (filtros.fecha_desde) {
+        query = query.gte('fecha_prestamo', new Date(filtros.fecha_desde).toISOString());
+      }
+      if (filtros.fecha_hasta) {
+        const fechaHasta = new Date(filtros.fecha_hasta);
+        fechaHasta.setDate(fechaHasta.getDate() + 1);
+        query = query.lt('fecha_prestamo', fechaHasta.toISOString());
+      }
 
       const { data, error } = await query
         .order('fecha_prestamo', { ascending: false })
