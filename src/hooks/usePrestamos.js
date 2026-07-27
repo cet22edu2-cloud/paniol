@@ -9,44 +9,74 @@ export const usePrestamos = (filtros = {}) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         console.log('🔄 Cargando préstamos...');
 
-        let query = supabase
+        // 🔧 CONSULTA SIMPLIFICADA - Evitamos joins complejos
+        const { data: prestamosData, error: prestamosError } = await supabase
           .from('prestamos')
-          .select(`
-            *,
-            docente:docentes(apellido, nombre, dni),
-            taller:talleres(nombre),
-            curso:cursos(año, division),
-            prestamos_detalle(
-              id,
-              cantidad,
-              herramienta_id,
-              herramienta:herramientas(codigo, descripcion, marca, modelo)
-            )
-          `);
+          .select('*')
+          .order('fecha_prestamo', { ascending: false });
 
-        if (filtros.estado && filtros.estado !== 'TODOS') {
-          query = query.eq('estado', filtros.estado);
-        }
-        if (filtros.search) {
-          query = query.ilike('docentes.apellido', `%${filtros.search}%`);
-        }
-        if (filtros.taller_id) {
-          query = query.eq('taller_id', filtros.taller_id);
+        if (prestamosError) {
+          console.error('❌ Error al cargar préstamos:', prestamosError);
+          throw prestamosError;
         }
 
-        const { data, error } = await query
-          .order('fecha_prestamo', { ascending: false })
-          .limit(100);
+        console.log('📋 Préstamos cargados (sin relaciones):', prestamosData?.length || 0);
 
-        if (error) {
-          console.error('❌ Error en consulta:', error);
-          throw error;
+        // Si no hay préstamos, devolver vacío
+        if (!prestamosData || prestamosData.length === 0) {
+          setData([]);
+          setLoading(false);
+          return;
         }
 
-        console.log('📋 Préstamos cargados:', data?.length || 0);
-        setData(data || []);
+        // Obtener IDs de docentes y talleres
+        const docenteIds = [...new Set(prestamosData.map(p => p.docente_id).filter(Boolean))];
+        const tallerIds = [...new Set(prestamosData.map(p => p.taller_id).filter(Boolean))];
+
+        console.log('🔍 Docentes a cargar:', docenteIds);
+        console.log('🔍 Talleres a cargar:', tallerIds);
+
+        // Cargar docentes
+        const { data: docentesData, error: docentesError } = await supabase
+          .from('docentes')
+          .select('id, apellido, nombre, dni')
+          .in('id', docenteIds);
+
+        if (docentesError) {
+          console.error('❌ Error al cargar docentes:', docentesError);
+        }
+
+        // Cargar talleres
+        const { data: talleresData, error: talleresError } = await supabase
+          .from('talleres')
+          .select('id, nombre')
+          .in('id', tallerIds);
+
+        if (talleresError) {
+          console.error('❌ Error al cargar talleres:', talleresError);
+        }
+
+        // Crear mapas para búsqueda rápida
+        const docentesMap = {};
+        docentesData?.forEach(d => docentesMap[d.id] = d);
+
+        const talleresMap = {};
+        talleresData?.forEach(t => talleresMap[t.id] = t);
+
+        // Combinar datos
+        const combinedData = prestamosData.map(p => ({
+          ...p,
+          docente: docentesMap[p.docente_id] || null,
+          taller: talleresMap[p.taller_id] || null
+        }));
+
+        console.log('📋 Datos combinados:', combinedData.length);
+        console.log('📋 Ejemplo de préstamo combinado:', combinedData[0]);
+
+        setData(combinedData);
       } catch (err) {
         console.error('❌ Error general:', err);
         setError(err.message);
