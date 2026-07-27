@@ -50,7 +50,6 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
     fetchData();
   }, []);
 
-  // Actualizar herramientas filtradas cuando cambia el taller
   useEffect(() => {
     if (tallerId) {
       const filtered = herramientas.filter(h => h.taller_id === tallerId);
@@ -69,7 +68,6 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
         return;
       }
 
-      // 1. Crear el préstamo
       const prestamoData = {
         usuario_id: user.id,
         docente_id: data.docente_id,
@@ -88,7 +86,6 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
 
       if (prestamoError) throw prestamoError;
 
-      // 2. Crear los detalles del préstamo
       const detalles = data.items.map(item => ({
         prestamo_id: prestamo.id,
         herramienta_id: item.herramienta_id,
@@ -102,9 +99,7 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
 
       if (detalleError) throw detalleError;
 
-      // 3. Actualizar stock de herramientas
       for (const item of data.items) {
-        // Obtener stock actual
         const { data: herramienta, error: stockError } = await supabase
           .from('herramientas')
           .select('stock')
@@ -115,7 +110,6 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
 
         const nuevoStock = herramienta.stock - parseInt(item.cantidad);
         
-        // Actualizar stock
         const { error: updateError } = await supabase
           .from('herramientas')
           .update({ stock: nuevoStock })
@@ -123,7 +117,6 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
 
         if (updateError) throw updateError;
 
-        // 4. Registrar movimiento de stock
         const { error: movimientoError } = await supabase
           .from('movimientos_stock')
           .insert({
@@ -141,18 +134,27 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
       alert('✅ Préstamo creado exitosamente');
       
       // Cerrar el modal y actualizar la lista
-      if (onSuccess && typeof onSuccess === 'function') {
-        onSuccess();
+      setLoading(false);
+      
+      try {
+        if (onSuccess && typeof onSuccess === 'function') {
+          onSuccess();
+        }
+      } catch (err) {
+        console.warn('Error en onSuccess:', err);
       }
       
-      if (onClose && typeof onClose === 'function') {
-        onClose();
+      try {
+        if (onClose && typeof onClose === 'function') {
+          onClose();
+        }
+      } catch (err) {
+        console.warn('Error en onClose:', err);
       }
       
     } catch (error) {
       console.error('Error creando préstamo:', error);
       alert('❌ Error al crear el préstamo: ' + error.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -284,12 +286,6 @@ const PrestamoForm = ({ onClose, onSuccess }) => {
             >
               + Agregar herramienta
             </button>
-            
-            {filteredHerramientas.length === 0 && tallerId && (
-              <p className="text-yellow-600 text-sm mt-2">
-                ⚠️ No hay herramientas disponibles en este taller
-              </p>
-            )}
           </div>
 
           <div className="flex justify-end space-x-3 pt-4 border-t">

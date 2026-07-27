@@ -23,144 +23,91 @@ const DevolucionForm = ({ prestamo, onClose, onSuccess }) => {
 
     try {
       console.log('🔄 Procesando devolución...');
-      console.log('📋 Datos del préstamo:', prestamo);
-      console.log('📋 Detalles del préstamo:', prestamo?.prestamos_detalle);
 
-      // Verificar que hay detalles
       if (!prestamo?.prestamos_detalle || prestamo.prestamos_detalle.length === 0) {
         throw new Error('No hay herramientas asociadas a este préstamo');
       }
 
-      // 1. Actualizar cada detalle con su estado de devolución
       for (const detalle of prestamo.prestamos_detalle) {
-        console.log(`📝 Procesando detalle:`, detalle);
-
-        // Validar que detalle tenga id
-        if (!detalle.id) {
-          console.error('❌ Detalle sin ID:', detalle);
-          throw new Error('Detalle sin ID');
-        }
-
-        // Validar que detalle tenga herramienta_id
         let herramientaId = detalle.herramienta_id;
         
-        // Si no tiene herramienta_id, intentar obtenerla del objeto herramienta
         if (!herramientaId && detalle.herramienta && detalle.herramienta.id) {
-          console.log('🔧 Usando herramienta.id como herramienta_id:', detalle.herramienta.id);
           herramientaId = detalle.herramienta.id;
         }
 
         if (!herramientaId) {
-          console.error('❌ Detalle sin herramienta_id:', detalle);
           throw new Error('Detalle sin herramienta_id');
         }
 
-        console.log(`📝 Actualizando detalle ${detalle.id} con herramienta_id ${herramientaId}...`);
-
-        // 1. Actualizar detalle
-        const { data: updatedDetalle, error: detalleError } = await supabase
+        const { error: detalleError } = await supabase
           .from('prestamos_detalle')
           .update({
             estado_devolucion: estados[detalle.id] || 'BUENO',
             fecha_devolucion: new Date().toISOString()
           })
-          .eq('id', detalle.id)
-          .select();
+          .eq('id', detalle.id);
 
-        if (detalleError) {
-          console.error('❌ Error en detalle:', detalleError);
-          throw detalleError;
-        }
+        if (detalleError) throw detalleError;
 
-        console.log('✅ Detalle actualizado:', updatedDetalle);
-
-        // 2. Obtener stock actual
         const { data: herramienta, error: stockError } = await supabase
           .from('herramientas')
           .select('stock')
           .eq('id', herramientaId)
           .single();
 
-        if (stockError) {
-          console.error('❌ Error al obtener stock:', stockError);
-          throw stockError;
-        }
+        if (stockError) throw stockError;
 
         const nuevoStock = herramienta.stock + detalle.cantidad;
-        console.log(`📊 Actualizando stock: ${herramienta.stock} → ${nuevoStock}`);
 
-        // 3. Actualizar stock
         const { error: updateError } = await supabase
           .from('herramientas')
           .update({ stock: nuevoStock })
           .eq('id', herramientaId);
 
-        if (updateError) {
-          console.error('❌ Error al actualizar stock:', updateError);
-          throw updateError;
-        }
+        if (updateError) throw updateError;
 
-        // 4. Registrar movimiento
-        console.log('📝 Registrando movimiento...');
-        const movimiento = {
-          herramienta_id: herramientaId,
-          usuario_id: user.id,
-          tipo: 'DEVOLUCION',
-          cantidad: detalle.cantidad,
-          referencia: prestamo.id,
-          observacion: `Devolución del préstamo #${prestamo.id}`
-        };
-
-        console.log('📝 Movimiento a insertar:', movimiento);
-
-        const { data: movimientoData, error: movimientoError } = await supabase
+        const { error: movimientoError } = await supabase
           .from('movimientos_stock')
-          .insert(movimiento)
-          .select();
+          .insert({
+            herramienta_id: herramientaId,
+            usuario_id: user.id,
+            tipo: 'DEVOLUCION',
+            cantidad: detalle.cantidad,
+            referencia: prestamo.id,
+            observacion: `Devolución del préstamo #${prestamo.id}`
+          });
 
-        if (movimientoError) {
-          console.error('❌ Error al registrar movimiento:', movimientoError);
-          throw movimientoError;
-        }
-
-        console.log('✅ Movimiento registrado:', movimientoData);
+        if (movimientoError) throw movimientoError;
       }
 
-      // 5. Cerrar préstamo
-      console.log('📝 Cerrando préstamo...');
-      const { data: closedPrestamo, error: prestamoError } = await supabase
+      const { error: prestamoError } = await supabase
         .from('prestamos')
         .update({
           estado: 'CERRADO',
           fecha_cierre: new Date().toISOString()
         })
-        .eq('id', prestamo.id)
-        .select();
+        .eq('id', prestamo.id);
 
-      if (prestamoError) {
-        console.error('❌ Error al cerrar préstamo:', prestamoError);
-        throw prestamoError;
-      }
+      if (prestamoError) throw prestamoError;
 
-      console.log('✅ Préstamo cerrado:', closedPrestamo);
-      console.log('✅ Devolución completada exitosamente');
-      
-      // Mostrar mensaje de éxito
       alert('✅ Devolución completada exitosamente');
       
-      // ============================================================
-      // 🔧 CORRECCIÓN: Cerrar el modal y actualizar la lista
-      // ============================================================
       setLoading(false);
       
-      // Primero actualizar la lista (onSuccess)
-      if (onSuccess && typeof onSuccess === 'function') {
-        onSuccess();
+      try {
+        if (onSuccess && typeof onSuccess === 'function') {
+          onSuccess();
+        }
+      } catch (err) {
+        console.warn('Error en onSuccess:', err);
       }
       
-      // Luego cerrar el modal (onClose)
-      if (onClose && typeof onClose === 'function') {
-        onClose();
+      try {
+        if (onClose && typeof onClose === 'function') {
+          onClose();
+        }
+      } catch (err) {
+        console.warn('Error en onClose:', err);
       }
 
     } catch (error) {
