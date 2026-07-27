@@ -11,7 +11,6 @@ export const usePrestamos = (filtros = {}) => {
       setLoading(true);
       console.log('🔄 Cargando préstamos con filtros:', filtros);
 
-      // 🔧 CONSULTA CORREGIDA - Incluye docente y filtros
       let query = supabase
         .from('prestamos')
         .select(`
@@ -48,30 +47,21 @@ export const usePrestamos = (filtros = {}) => {
         query = query.eq('estado', filtros.estado);
       }
       
-      // 🔧 FILTRO POR BÚSQUEDA (docente) - Versión corregida
+      // 🔧 FILTRO POR DOCENTE - Versión que funcionaba
       if (filtros.search && filtros.search.trim() !== '') {
-        console.log('🔍 Buscando docente:', filtros.search);
-        
-        // Buscar docentes que coincidan con el término
         const searchTerm = `%${filtros.search.trim()}%`;
-        const { data: docentesFiltrados, error: docentesError } = await supabase
+        
+        // Buscar docentes que coincidan
+        const { data: docentesFiltrados } = await supabase
           .from('docentes')
           .select('id')
           .or(`apellido.ilike.${searchTerm},nombre.ilike.${searchTerm}`);
         
-        if (docentesError) {
-          console.error('❌ Error al buscar docentes:', docentesError);
-        }
-        
         const docentesIds = docentesFiltrados?.map(d => d.id) || [];
-        console.log('🔍 Docentes encontrados:', docentesIds);
         
         if (docentesIds.length > 0) {
-          // Filtrar préstamos por los IDs de docentes encontrados
           query = query.in('docente_id', docentesIds);
         } else {
-          // No hay docentes que coincidan, devolver vacío
-          console.log('🔍 No se encontraron docentes con ese término');
           setData([]);
           setLoading(false);
           return;
@@ -108,7 +98,6 @@ export const usePrestamos = (filtros = {}) => {
       }
 
       console.log('📋 Préstamos cargados:', data?.length || 0);
-      console.log('📋 Ejemplo de préstamo:', data?.[0]);
       
       setData(data || []);
     } catch (err) {
