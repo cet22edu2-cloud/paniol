@@ -31,11 +31,18 @@ export const usePrestamos = (filtros = {}) => {
       if (filtros.estado && filtros.estado !== 'TODOS') {
         query = query.eq('estado', filtros.estado);
       }
+      
       if (filtros.search) {
-        query = query.or(`docentes.apellido.ilike.%${filtros.search}%,docentes.nombre.ilike.%${filtros.search}%`);
+        // 🔧 CORRECCIÓN: Usar la sintaxis correcta para OR en Supabase
+        const searchTerm = `%${filtros.search}%`;
+        query = query.or(`apellido.ilike.${searchTerm},nombre.ilike.${searchTerm}`, { foreignTable: 'docentes' });
       }
+      
       if (filtros.taller_id) {
         query = query.eq('taller_id', filtros.taller_id);
+      }
+      if (filtros.docente_id) {
+        query = query.eq('docente_id', filtros.docente_id);
       }
       if (filtros.fecha_desde) {
         query = query.gte('fecha_prestamo', new Date(filtros.fecha_desde).toISOString());
