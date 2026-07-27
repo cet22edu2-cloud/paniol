@@ -10,9 +10,9 @@ export const usePrestamos = (filtros = {}) => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        console.log('🔄 Cargando préstamos...');
+        console.log('🔄 Cargando préstamos con filtros:', filtros);
 
-        // 🔧 CONSULTA SIMPLIFICADA - Evitamos joins complejos
+        // 1. Cargar TODOS los préstamos
         const { data: prestamosData, error: prestamosError } = await supabase
           .from('prestamos')
           .select('*')
@@ -23,23 +23,19 @@ export const usePrestamos = (filtros = {}) => {
           throw prestamosError;
         }
 
-        console.log('📋 Préstamos cargados (sin relaciones):', prestamosData?.length || 0);
+        console.log('📋 Préstamos cargados (sin filtrar):', prestamosData?.length || 0);
 
-        // Si no hay préstamos, devolver vacío
         if (!prestamosData || prestamosData.length === 0) {
           setData([]);
           setLoading(false);
           return;
         }
 
-        // Obtener IDs de docentes y talleres
+        // 2. Obtener IDs de docentes y talleres
         const docenteIds = [...new Set(prestamosData.map(p => p.docente_id).filter(Boolean))];
         const tallerIds = [...new Set(prestamosData.map(p => p.taller_id).filter(Boolean))];
 
-        console.log('🔍 Docentes a cargar:', docenteIds);
-        console.log('🔍 Talleres a cargar:', tallerIds);
-
-        // Cargar docentes
+        // 3. Cargar docentes
         const { data: docentesData, error: docentesError } = await supabase
           .from('docentes')
           .select('id, apellido, nombre, dni')
@@ -49,7 +45,7 @@ export const usePrestamos = (filtros = {}) => {
           console.error('❌ Error al cargar docentes:', docentesError);
         }
 
-        // Cargar talleres
+        // 4. Cargar talleres
         const { data: talleresData, error: talleresError } = await supabase
           .from('talleres')
           .select('id, nombre')
@@ -59,23 +55,65 @@ export const usePrestamos = (filtros = {}) => {
           console.error('❌ Error al cargar talleres:', talleresError);
         }
 
-        // Crear mapas para búsqueda rápida
+        // 5. Crear mapas para búsqueda rápida
         const docentesMap = {};
         docentesData?.forEach(d => docentesMap[d.id] = d);
 
         const talleresMap = {};
         talleresData?.forEach(t => talleresMap[t.id] = t);
 
-        // Combinar datos
-        const combinedData = prestamosData.map(p => ({
+        // 6. Combinar datos
+        let combinedData = prestamosData.map(p => ({
           ...p,
           docente: docentesMap[p.docente_id] || null,
           taller: talleresMap[p.taller_id] || null
         }));
 
-        console.log('📋 Datos combinados:', combinedData.length);
-        console.log('📋 Ejemplo de préstamo combinado:', combinedData[0]);
+        console.log('📋 Datos combinados (antes de filtrar):', combinedData.length);
 
+        // ============================================================
+        // 🔧 APLICAR FILTROS
+        // ============================================================
+
+        // 6.1 Filtro por estado
+        if (filtros.estado && filtros.estado !== 'TODOS') {
+          combinedData = combinedData.filter(p => p.estado === filtros.estado);
+          console.log(`📌 Filtrado por estado: ${filtros.estado} → ${combinedData.length} préstamos`);
+        }
+
+        // 6.2 Filtro por búsqueda (docente)
+        if (filtros.search && filtros.search.trim() !== '') {
+          const searchTerm = filtros.search.trim().toLowerCase();
+          combinedData = combinedData.filter(p => {
+            const nombreCompleto = `${p.docente?.apellido || ''} ${p.docente?.nombre || ''}`.toLowerCase();
+            return nombreCompleto.includes(searchTerm);
+          });
+          console.log(`📌 Filtrado por búsqueda: "${searchTerm}" → ${combinedData.length} préstamos`);
+        }
+
+        // 6.3 Filtro por taller
+        if (filtros.taller_id) {
+          combinedData = combinedData.filter(p => p.taller_id === filtros.taller_id);
+        }
+
+        // 6.4 Filtro por docente específico
+        if (filtros.docente_id) {
+          combinedData = combinedData.filter(p => p.docente_id === filtros.docente_id);
+        }
+
+        // 6.5 Filtro por fechas
+        if (filtros.fecha_desde) {
+          const fechaDesde = new Date(filtros.fecha_desde);
+          combinedData = combinedData.filter(p => new Date(p.fecha_prestamo) >= fechaDesde);
+        }
+        if (filtros.fecha_hasta) {
+          const fechaHasta = new Date(filtros.fecha_hasta);
+          fechaHasta.setDate(fechaHasta.getDate() + 1);
+          combinedData = combinedData.filter(p => new Date(p.fecha_prestamo) < fechaHasta);
+        }
+
+        console.log('📋 Préstamos finales:', combinedData.length);
+        
         setData(combinedData);
       } catch (err) {
         console.error('❌ Error general:', err);
@@ -86,7 +124,7 @@ export const usePrestamos = (filtros = {}) => {
     };
 
     fetchData();
-  }, [filtros]);
+  }, [filtros]); // ✅ Ejecutar cada vez que cambian los filtros
 
   return { data, loading, error, refetch: () => {} };
 };
