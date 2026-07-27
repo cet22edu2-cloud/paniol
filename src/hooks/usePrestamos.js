@@ -6,6 +6,12 @@ export const usePrestamos = (filtros = {}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Función para eliminar acentos
+  const removeAccents = (str) => {
+    if (!str) return '';
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -72,7 +78,7 @@ export const usePrestamos = (filtros = {}) => {
         console.log('📋 Datos combinados (antes de filtrar):', combinedData.length);
 
         // ============================================================
-        // 🔧 APLICAR FILTROS
+        // 🔧 APLICAR FILTROS (CON SOPORTE PARA ACENTOS)
         // ============================================================
 
         // 6.1 Filtro por estado
@@ -81,12 +87,13 @@ export const usePrestamos = (filtros = {}) => {
           console.log(`📌 Filtrado por estado: ${filtros.estado} → ${combinedData.length} préstamos`);
         }
 
-        // 6.2 Filtro por búsqueda (docente)
+        // 6.2 Filtro por búsqueda (docente) - SIN ACENTOS Y SIN MAYÚSCULAS
         if (filtros.search && filtros.search.trim() !== '') {
-          const searchTerm = filtros.search.trim().toLowerCase();
+          const searchTerm = removeAccents(filtros.search.trim().toLowerCase());
           combinedData = combinedData.filter(p => {
-            const nombreCompleto = `${p.docente?.apellido || ''} ${p.docente?.nombre || ''}`.toLowerCase();
-            return nombreCompleto.includes(searchTerm);
+            const nombreCompleto = `${p.docente?.apellido || ''} ${p.docente?.nombre || ''}`;
+            const nombreSinAcentos = removeAccents(nombreCompleto.toLowerCase());
+            return nombreSinAcentos.includes(searchTerm);
           });
           console.log(`📌 Filtrado por búsqueda: "${searchTerm}" → ${combinedData.length} préstamos`);
         }
@@ -124,7 +131,7 @@ export const usePrestamos = (filtros = {}) => {
     };
 
     fetchData();
-  }, [filtros]); // ✅ Ejecutar cada vez que cambian los filtros
+  }, [filtros]);
 
   return { data, loading, error, refetch: () => {} };
 };
