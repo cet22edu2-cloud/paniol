@@ -11,39 +11,74 @@ export const usePrestamos = (filtros = {}) => {
       setLoading(true);
       console.log('🔄 Cargando préstamos...');
 
+      // 🔧 CONSULTA CORREGIDA - Incluye docente
       let query = supabase
         .from('prestamos')
         .select(`
           *,
-          docente:docentes(apellido, nombre, dni),
-          taller:talleres(nombre),
-          curso:cursos(año, division),
+          docente:docentes(
+            id,
+            apellido,
+            nombre,
+            dni
+          ),
+          taller:talleres(
+            id,
+            nombre
+          ),
+          curso:cursos(
+            año,
+            division
+          ),
           prestamos_detalle(
             id,
             cantidad,
             herramienta_id,
-            estado_salida,
-            estado_devolucion,
-            herramienta:herramientas(codigo, descripcion, marca, modelo)
+            herramienta:herramientas(
+              codigo,
+              descripcion,
+              marca,
+              modelo
+            )
           )
         `);
 
+      // Filtro por estado
       if (filtros.estado && filtros.estado !== 'TODOS') {
         query = query.eq('estado', filtros.estado);
       }
       
+      // Filtro por búsqueda (docente)
       if (filtros.search) {
-        // 🔧 CORRECCIÓN: Usar la sintaxis correcta para OR en Supabase
+        // Buscar docentes que coincidan con el término
         const searchTerm = `%${filtros.search}%`;
-        query = query.or(`apellido.ilike.${searchTerm},nombre.ilike.${searchTerm}`, { foreignTable: 'docentes' });
+        const { data: docentesFiltrados } = await supabase
+          .from('docentes')
+          .select('id')
+          .or(`apellido.ilike.${searchTerm},nombre.ilike.${searchTerm}`);
+        
+        const docentesIds = docentesFiltrados?.map(d => d.id) || [];
+        
+        if (docentesIds.length > 0) {
+          query = query.in('docente_id', docentesIds);
+        } else {
+          setData([]);
+          setLoading(false);
+          return;
+        }
       }
       
+      // Filtro por taller
       if (filtros.taller_id) {
         query = query.eq('taller_id', filtros.taller_id);
       }
+      
+      // Filtro por docente específico
       if (filtros.docente_id) {
         query = query.eq('docente_id', filtros.docente_id);
       }
+      
+      // Filtro por fechas
       if (filtros.fecha_desde) {
         query = query.gte('fecha_prestamo', new Date(filtros.fecha_desde).toISOString());
       }
@@ -63,6 +98,8 @@ export const usePrestamos = (filtros = {}) => {
       }
 
       console.log('📋 Préstamos cargados:', data?.length || 0);
+      console.log('📋 Ejemplo de préstamo:', data?.[0]);
+      
       setData(data || []);
     } catch (err) {
       console.error('❌ Error general:', err);
