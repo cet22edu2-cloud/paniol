@@ -122,10 +122,13 @@ const PrestamosList = () => {
             {prestamos && prestamos.length > 0 ? (
               prestamos.map((prestamo) => (
                 <tr key={prestamo.id} className="hover:bg-gray-50">
+                  {/* 🔧 CORREGIDO: Mostrar el nombre del docente */}
                   <td className="px-6 py-4">
-                    {prestamo.docente?.apellido}, {prestamo.docente?.nombre}
+                    {prestamo.docente ? `${prestamo.docente.apellido}, ${prestamo.docente.nombre}` : 'Docente no asignado'}
                   </td>
-                  <td className="px-6 py-4">{prestamo.taller?.nombre}</td>
+                  <td className="px-6 py-4">
+                    {prestamo.taller?.nombre || 'Sin taller'}
+                  </td>
                   <td className="px-6 py-4">
                     {format(new Date(prestamo.fecha_prestamo), 'dd/MM/yyyy HH:mm', { locale: es })}
                   </td>
